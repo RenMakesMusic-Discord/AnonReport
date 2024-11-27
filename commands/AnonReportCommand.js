@@ -24,12 +24,24 @@ class AnonReportCommand {
             }
 
             const caseNumber = await this.guildManager.incrementCaseCounter(guild.id, guild.name);
-            const channel = await this.guildManager.createAnonymousChannel(guild, user.id, caseNumber);
-
-            await this.caseManager.createCase(user.id, guild.id, channel.id, caseNumber);
-
-            await interaction.editReply('Your case has been created!');
-            await user.send(`Your anonymous report has been created. Moderators will respond in the private channel: ${channel.name}.`);
+            
+            try {
+                await user.send(`Your anonymous report has been created. Moderators will respond in the private channel.`);            
+                const channel = await this.guildManager.createAnonymousChannel(guild, user.id, caseNumber);
+                await this.caseManager.createCase(user.id, guild.id, channel.id, caseNumber);
+                
+            } catch (error) {
+                if (error.code === 50007) { // Cannot send messages to this user
+                  console.warn(`Could not DM user ${user.tag}: ${error.message}`);
+                  await interaction.editReply(
+                    `Oops, I can't DM you right now. Your permissions disallow others from sending you a message.`
+                  );
+                } else {
+                  throw error; // Re-throw unexpected errors
+                }
+              }
+              
+           
         } catch (error) {
             console.error('Error executing anonreport command:', error);
             await interaction.editReply('An error occurred while creating your report. Please try again later.');
